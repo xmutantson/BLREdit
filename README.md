@@ -37,3 +37,24 @@ Export Loadout to Clipboard for MagiCow's Loadout Customization bot
 
 # Download
 [Download From Github Releases](https://github.com/HALOMAXX/BLREdit/releases)
+
+# Offline server registry checks
+
+Before changing `Resources/ServerList.json`, run these commands from the repository
+root with Python 3 (standard library only):
+
+```
+python tools/validate_server_registry.py
+python -m unittest discover -s tests -v
+```
+
+The validator checks structure, property names and types, duplicate IDs and game
+endpoints, hostname/IPv4 syntax, and port ranges. ServerAddress accepts ASCII DNS
+hostnames (including a terminal root dot) or strict dotted-decimal IPv4; ports
+belong in the separate fields. DNS case and a terminal dot do not distinguish
+duplicate endpoints. IPv6 and ambiguous legacy numeric address spellings are
+not accepted by this registry check. Omitted ports retain the application's 7777
+defaults.
+It reads files only: it does not resolve hosts, probe servers, or launch BLREdit.
+The regression suite also preserves the explicit 7778 game and info ports from
+upstream PR #137. See [implementation notes](IMPLEMENTATION_NOTES.md) for scope.
