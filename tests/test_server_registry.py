@@ -57,6 +57,36 @@ class RegistryTests(unittest.TestCase):
             with self.subTest(host=host), self.assertRaises(ValueError):
                 validate_registry([dict(self.entry, ServerAddress=host)])
 
+    def test_valid_hostname_and_ipv4_forms(self):
+        for host in ('localhost', 'EXAMPLE.invalid.', 'node-1.example.invalid',
+                     'xn--bcher-kva.invalid', '192.0.2.1', '0.0.0.0', '255.255.255.255',
+                     'a' * 63 + '.invalid', '.'.join(['a' * 63] * 3 + ['b' * 61])):
+            with self.subTest(host=host):
+                entry = dict(self.entry, ServerAddress=host, Port=7778, InfoPort=7777)
+                original = copy.deepcopy(entry)
+                self.assertEqual(validate_registry([entry]), 1)
+                self.assertEqual(entry, original)
+
+    def test_invalid_hostname_and_ipv4_forms(self):
+        for host in ('example.invalid:7778', '192.0.2.1:7778', '[::1]', '::1',
+                     'bad_name.invalid', '-bad.invalid', 'bad-.invalid', 'a..invalid',
+                     '.example.invalid', 'example.invalid..', '.', 'host!invalid',
+                     'a' * 64 + '.invalid', '.'.join(['a' * 63] * 4),
+                     '256.0.0.1', '192.0.2', '127.1', '2130706433', '192.00.2.1',
+                     '192.0.2.1.', '0x7f000001', '0x7f.0.0.1', 'host.123',
+                     'example.invalid\\path', 'bücher.invalid'):
+            with self.subTest(host=host), self.assertRaises(ValueError):
+                validate_registry([dict(self.entry, ServerAddress=host)])
+
+    def test_terminal_dns_dot_is_same_game_endpoint(self):
+        with self.assertRaisesRegex(ValueError, 'duplicate game endpoint'):
+            validate_registry([self.entry, dict(self.entry, ID='other',
+                              ServerAddress='EXAMPLE.INVALID.', InfoPort=9999)])
+
+    def test_terminal_dns_dot_with_distinct_game_port(self):
+        self.assertEqual(validate_registry([self.entry, dict(self.entry, ID='other',
+                         ServerAddress='EXAMPLE.INVALID.', Port=7778)]), 2)
+
     def test_optional_types_and_typos(self):
         for extra in ({'Hidden': 'true'}, {'ValidatesLoadout': 1}, {'Region': []}, {'Infoport': 7778}):
             with self.subTest(extra=extra), self.assertRaises(ValueError):
